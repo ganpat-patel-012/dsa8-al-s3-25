@@ -1,0 +1,10 @@
+streamlit
+pandas
+numpy
+joblib
+scikit-learn
+fastapi
+uvicorn
+requests
+psycopg2-binary
+SQLAlchemy>=1.4,<2.0

@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: dsa8_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: dsa8_user
+      POSTGRES_PASSWORD: dsa8_pass
+      POSTGRES_DB: dsa8_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./ddl:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dsa8_user -d dsa8_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dsa8_network
+
+  fastapi:
+    build: ./
+    container_name: dsa8_fastapi
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    networks:
+      - dsa8_network
+    command: uvicorn configFiles.fastAPI:app --host 0.0.0.0 --port 8000
+
+  streamlit:
+    build: ./
+    container_name: dsa8_streamlit
+    restart: always
+    depends_on:
+      fastapi:
+        condition: service_started
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./:/app
+    networks:
+      - dsa8_network
+    command: streamlit run main.py --server.port=8501 --server.address=0.0.0.0
+
+volumes:
+  pg_data:
+  database:
+
+networks:
+  dsa8_network:
+    driver: bridge
