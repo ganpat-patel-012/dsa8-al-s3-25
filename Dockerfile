@@ -5,6 +5,7 @@ WORKDIR /app
 # Copy and install dependencies first (to leverage Docker layer caching)
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
+RUN python3 -m nltk.downloader punkt stopwords wordnet
 
 # Copy the rest of the application files
 COPY . /app
