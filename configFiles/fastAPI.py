@@ -91,7 +91,7 @@ def predict_lstm(request: PredictionRequest):
     try:
         x = prepare_input(request.dict())
         prob = float(lstm_model.predict(x, verbose=0)[0][0])
-        return {"probability": prob}
+        return {"probability_lstm": prob}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -100,7 +100,7 @@ def predict_gru(request: PredictionRequest):
     try:
         x = prepare_input(request.dict())
         prob = float(gru_model.predict(x, verbose=0)[0][0])
-        return {"probability": prob}
+        return {"probability_gru": prob}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -109,6 +109,6 @@ def predict_textcnn(request: PredictionRequest):
     try:
         x = prepare_input(request.dict())
         prob = float(textcnn_model.predict(x, verbose=0)[0][0])
-        return {"probability": prob}
+        return {"probability_textcnn": prob}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

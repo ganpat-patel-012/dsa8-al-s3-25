@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-# from configFiles.makePrediction import get_prediction
+from configFiles.makePrediction import get_prediction_lstm, get_prediction_gru, get_prediction_textcnn
 # from configFiles.dbCode import insert_prediction
 from datetime import datetime
  
@@ -25,8 +25,12 @@ def show():
                 "location": location, "party": party,
                 "context": context
             }
-            # predicted_price = get_prediction(payload)
-            # st.write("Predicted Price (₹)", predicted_price)
+            probability_lstm = get_prediction_lstm(payload)
+            probability_gru = get_prediction_gru(payload)
+            probability_textcnn = get_prediction_textcnn(payload)
+            st.write("Probability LSTM", probability_lstm)
+            st.write("Probability GRU", probability_gru)
+            st.write("Probability TEXTCNN", probability_textcnn)
             # result_data = {**payload, "predicted_price": predicted_price, "prediction_source": "WebApp", "prediction_type": "Single"}
             # msg = insert_prediction(result_data)
             # st.success(msg)
