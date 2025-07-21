@@ -5,17 +5,18 @@ import tensorflow as tf
 import pickle
 import numpy as np
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 import string
 import os
+import nltk
 
-# Download NLTK resources if not already present
-# nltk.download('punkt')
-# nltk.download('stopwords')
-# nltk.download('wordnet')
+# make sure all of these are present
+nltk.download('punkt',       quiet=True)
+nltk.download('punkt_tab',   quiet=True)
+nltk.download('stopwords',   quiet=True)
+nltk.download('wordnet',     quiet=True)
 
 app = FastAPI()
 
