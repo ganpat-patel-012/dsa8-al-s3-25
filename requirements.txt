@@ -7,4 +7,7 @@ fastapi
 uvicorn
 requests
 psycopg2-binary
+tensorflow
+nltk
+pydantic
 SQLAlchemy>=1.4,<2.0
