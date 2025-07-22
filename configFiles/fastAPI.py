@@ -82,6 +82,12 @@ class PredictionRequest(BaseModel):
     party: str
     context: str
 
+class FeedbackRequest(BaseModel):
+    p_id: int
+    statement: str
+    flag: str
+    comment: str = None
+
 # Helper to preprocess and vectorize input
 def prepare_input(payload):
     combined = combine_fields(payload)
@@ -117,22 +123,10 @@ def past_predictions(start_date: str, end_date: str):
         end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
 
         query = """
-        SELECT 
-          p.*, 
-          COALESCE(
-            json_agg(
-              json_build_object(
-                'f_id', f.f_id,
-                'f_flag', f.f_flag,
-                'f_comment', f.f_comment
-              )
-            ) FILTER (WHERE f.f_id IS NOT NULL), '[]'
-          ) AS feedbacks
-        FROM predictions p
-        LEFT JOIN feedback f ON p.p_id = f.f_p_id
-        WHERE p.prediction_time::DATE BETWEEN %s AND %s
-        GROUP BY p.p_id
-        ORDER BY p.prediction_time DESC
+        SELECT *
+        FROM predictions
+        WHERE prediction_time::DATE BETWEEN %s AND %s
+        ORDER BY prediction_time DESC
         """
         params = [start_date, end_date]
         cursor.execute(query, tuple(params))
