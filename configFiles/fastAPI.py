@@ -116,9 +116,25 @@ def past_predictions(start_date: str, end_date: str):
         start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
         end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
 
-        query = "SELECT * FROM predictions WHERE prediction_time::DATE BETWEEN %s AND %s"
+        query = """
+        SELECT 
+          p.*, 
+          COALESCE(
+            json_agg(
+              json_build_object(
+                'f_id', f.f_id,
+                'f_flag', f.f_flag,
+                'f_comment', f.f_comment
+              )
+            ) FILTER (WHERE f.f_id IS NOT NULL), '[]'
+          ) AS feedbacks
+        FROM predictions p
+        LEFT JOIN feedback f ON p.p_id = f.f_p_id
+        WHERE p.prediction_time::DATE BETWEEN %s AND %s
+        GROUP BY p.p_id
+        ORDER BY p.prediction_time DESC
+        """
         params = [start_date, end_date]
-
         cursor.execute(query, tuple(params))
         rows = cursor.fetchall()
         conn.close()

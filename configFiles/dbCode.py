@@ -10,6 +10,7 @@ def insert_prediction(data):
     """
     Inserts prediction data into PostgreSQL, supporting both single and batch inserts.
     Expects dict(s) with keys matching the p_ column names (except prediction_time).
+    Returns the inserted p_id for single insert, or a list of p_ids for batch insert.
     """
     try:
         with get_connection() as conn:
@@ -31,13 +32,12 @@ def insert_prediction(data):
                         p_flag_gru,
                         p_flag_textcnn,
                         p_ensemble_flag
-                    ) VALUES ({placeholders})
+                    ) VALUES ({placeholders}) RETURNING p_id
                 """).format(
                     placeholders=sql.SQL(', ').join(sql.Placeholder() * 15)
                 )
 
                 if isinstance(data, list):
-                    # Batch insert: build a list of tuples
                     values = [
                         (
                             item["p_statements"],
@@ -59,8 +59,10 @@ def insert_prediction(data):
                         for item in data
                     ]
                     cursor.executemany(insert_query, values)
+                    p_ids = [row[0] for row in cursor.fetchall()]
+                    conn.commit()
+                    return p_ids
                 else:
-                    # Single insert
                     cursor.execute(insert_query, (
                         data["p_statements"],
                         data["p_subjects"],
@@ -78,9 +80,27 @@ def insert_prediction(data):
                         data["p_flag_textcnn"],
                         data["p_ensemble_flag"]
                     ))
-
-            conn.commit()
-        return "✅ Prediction(s) saved to database!"
-    
+                    p_id = cursor.fetchone()[0]
+                    conn.commit()
+                    return p_id
+        
     except Exception as e:
-        return f"❌ Database Error: {e}"
+        return f"\u274c Database Error: {e}"
+
+# New function to insert feedback
+def insert_feedback(f_p_id, f_statemnt, f_flag, f_comment):
+    """
+    Inserts feedback for a prediction into the feedback table.
+    """
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                insert_query = """
+                    INSERT INTO feedback (f_p_id, f_statemnt, f_flag, f_comment)
+                    VALUES (%s, %s, %s, %s)
+                """
+                cursor.execute(insert_query, (f_p_id, f_statemnt, f_flag, f_comment))
+            conn.commit()
+        return "\u2705 Feedback saved to database!"
+    except Exception as e:
+        return f"\u274c Database Error: {e}"
