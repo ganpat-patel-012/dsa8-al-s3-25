@@ -19,7 +19,7 @@ st.markdown("""
 1. **Data Input:** You paste or type a statement from a news article.  
 2. **Model Ensemble:** LSTM, GRU, and TextCNN weigh in.  
 3. **Fact‑Check:** Real-time scraping & LLM cross‑reference.  
-4. **Results:** A verdict (True, Mostly True, Half True, False, Pants on Fire!) with confidence scores.  
+4. **Results:** A verdict (True, False,) with confidence scores.  
 """, unsafe_allow_html=True)
 
 st.markdown("""<h2 style='text-align: center; color: #3498DB;'>Meet The Truth Detectives</h2>""", unsafe_allow_html=True)

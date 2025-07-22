@@ -1,0 +1,22 @@
+CREATE TABLE predictions (
+    p_id SERIAL PRIMARY KEY,
+    p_statements VARCHAR(500),
+    p_subjects VARCHAR(50),
+    p_speakers VARCHAR(50),
+    p_speakers_job_title VARCHAR(50),
+    p_locations VARCHAR(50),
+    p_party VARCHAR(50),
+    p_context VARCHAR(50),
+    p_probability_lstm NUMERIC(10,2),
+    p_probability_gru NUMERIC(10,2),
+    p_probability_textcnn NUMERIC(10,2),
+    p_ensemble_probability NUMERIC(10,2),
+    p_flag_lstm VARCHAR(50),
+    p_flag_gru VARCHAR(50),
+    p_flag_textcnn VARCHAR(50),
+    p_ensemble_flag VARCHAR(50),
+    prediction_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- remove all records : TRUNCATE TABLE predictions RESTART IDENTITY;
