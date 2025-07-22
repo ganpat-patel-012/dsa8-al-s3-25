@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from configFiles.makePrediction import get_prediction_lstm, get_prediction_gru, get_prediction_textcnn
+from configFiles.makePrediction import get_prediction_all
 # from configFiles.dbCode import insert_prediction
 from datetime import datetime
  
@@ -29,9 +29,14 @@ def show():
                     "location": location, "party": party,
                     "context": context
                 }
-                probability_lstm = get_prediction_lstm(payload)
-                probability_gru = get_prediction_gru(payload)
-                probability_textcnn = get_prediction_textcnn(payload)
+
+                result = get_prediction_all(payload)
+
+                if isinstance(result, dict):
+                    # Extract probabilities
+                    probability_lstm = result.get("probability_lstm", 0.0)
+                    probability_gru = result.get("probability_gru", 0.0)
+                    probability_textcnn = result.get("probability_textcnn", 0.0)
 
                 threshold = 0.6
 

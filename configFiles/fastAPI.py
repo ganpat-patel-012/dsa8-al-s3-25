@@ -86,29 +86,17 @@ def prepare_input(payload):
     padded = pad_sequences(seq, maxlen=MAX_SEQUENCE_LENGTH, padding="post", truncating="post")
     return padded
 
-@app.post("/predict/lstm")
-def predict_lstm(request: PredictionRequest):
+@app.post("/predict/all")
+def predict_all(request: PredictionRequest):
     try:
         x = prepare_input(request.dict())
-        prob = float(lstm_model.predict(x, verbose=0)[0][0])
-        return {"probability_lstm": prob}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/predict/gru")
-def predict_gru(request: PredictionRequest):
-    try:
-        x = prepare_input(request.dict())
-        prob = float(gru_model.predict(x, verbose=0)[0][0])
-        return {"probability_gru": prob}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/predict/textcnn")
-def predict_textcnn(request: PredictionRequest):
-    try:
-        x = prepare_input(request.dict())
-        prob = float(textcnn_model.predict(x, verbose=0)[0][0])
-        return {"probability_textcnn": prob}
+        prob_lstm = float(lstm_model.predict(x, verbose=0)[0][0])
+        prob_gru = float(gru_model.predict(x, verbose=0)[0][0])
+        prob_textcnn = float(textcnn_model.predict(x, verbose=0)[0][0])
+        return {
+            "probability_lstm": prob_lstm,
+            "probability_gru": prob_gru,
+            "probability_textcnn": prob_textcnn
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
