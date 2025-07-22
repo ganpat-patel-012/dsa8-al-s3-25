@@ -123,10 +123,11 @@ def past_predictions(start_date: str, end_date: str):
         end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
 
         query = """
-        SELECT *
-        FROM predictions
-        WHERE prediction_time::DATE BETWEEN %s AND %s
-        ORDER BY prediction_time DESC
+        SELECT p.*, f.f_id, f.f_statemnt, f.f_flag, f.f_comment
+        FROM predictions p
+        LEFT JOIN feedback f ON p.p_id = f.f_p_id
+        WHERE p.prediction_time::DATE BETWEEN %s AND %s
+        ORDER BY p.prediction_time DESC
         """
         params = [start_date, end_date]
         cursor.execute(query, tuple(params))

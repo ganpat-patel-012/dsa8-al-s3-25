@@ -30,6 +30,8 @@ def show():
 
                 df = pd.DataFrame(data)
 
+                df = df.fillna("N/A")
+
                 # ✅ Set 'id' as index if it exists
                 if "id" in df.columns:
                     df = df.set_index("id")
