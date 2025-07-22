@@ -11,6 +11,10 @@ from nltk.stem import WordNetLemmatizer
 import string
 import os
 import nltk
+from configFiles.config import DB_CONFIG
+import psycopg2
+import psycopg2.extras
+from datetime import datetime
 
 # make sure all of these are present
 nltk.download('punkt',       quiet=True)
@@ -100,3 +104,24 @@ def predict_all(request: PredictionRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+def get_connection():
+    return psycopg2.connect(**DB_CONFIG)
+
+@app.get("/past-predictions")
+def past_predictions(start_date: str, end_date: str):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+
+        query = "SELECT * FROM predictions WHERE prediction_time::DATE BETWEEN %s AND %s"
+        params = [start_date, end_date]
+
+        cursor.execute(query, tuple(params))
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        return {"error": str(e)}
