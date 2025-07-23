@@ -15,6 +15,9 @@ from configFiles.config import DB_CONFIG
 import psycopg2
 import psycopg2.extras
 from datetime import datetime
+from passlib.context import CryptContext
+from fastapi import Depends
+from jose import JWTError, jwt
 
 # make sure all of these are present
 nltk.download('punkt',       quiet=True)
@@ -136,3 +139,72 @@ def past_predictions(start_date: str, end_date: str):
         return [dict(row) for row in rows]
     except Exception as e:
         return {"error": str(e)}
+
+# Password hashing context
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# JWT settings
+SECRET_KEY = "EPITA"  # Change this to a secure value
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+class UserRegister(BaseModel):
+    username: str
+    password: str
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def create_access_token(data: dict):
+    from datetime import datetime, timedelta
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+@app.post("/register")
+def register(user: UserRegister):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM users WHERE username=%s", (user.username,))
+        if cursor.fetchone():
+            conn.close()
+            raise HTTPException(status_code=400, detail="Username already exists")
+        password_hash = get_password_hash(user.password)
+        cursor.execute(
+            "INSERT INTO users (username, password_hash) VALUES (%s, %s) RETURNING id",
+            (user.username, password_hash)
+        )
+        user_id = cursor.fetchone()[0]
+        conn.commit()
+        conn.close()
+        return {"id": user_id, "username": user.username}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/login")
+def login(user: UserLogin):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, password_hash FROM users WHERE username=%s", (user.username,))
+        row = cursor.fetchone()
+        conn.close()
+        if not row:
+            raise HTTPException(status_code=401, detail="Invalid username or password")
+        user_id, password_hash = row
+        if not verify_password(user.password, password_hash):
+            raise HTTPException(status_code=401, detail="Invalid username or password")
+        access_token = create_access_token({"sub": user.username})
+        return {"access_token": access_token, "token_type": "bearer"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
