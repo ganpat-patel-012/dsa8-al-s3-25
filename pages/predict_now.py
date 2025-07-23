@@ -5,6 +5,7 @@ from configFiles.dbCode import insert_prediction, insert_feedback
 from datetime import datetime
 import psycopg2
 from configFiles.config import DB_CONFIG
+from configFiles.web_data_scrap import scrape_web_evidence
  
 def show():
     # Sidebar login/register button if not authenticated
@@ -102,6 +103,15 @@ def show():
                 st.subheader("Prediction Results")
                 st.table(df)
 
+                # --- Web Evidence Section ---
+                with st.spinner("Scraping web evidence for the statement..."):
+                    evidence_df = scrape_web_evidence(statement)
+                st.subheader("Web Evidence Results")
+                if not evidence_df.empty:
+                    st.dataframe(evidence_df)
+                else:
+                    st.info("No web evidence found for this statement.")
+
 
                 # result_data = {**payload, "predicted_price": predicted_price, "prediction_source": "WebApp", "prediction_type": "Single"}
                 result_data = {"p_statements": statement, "p_subjects": subject, "p_speakers": speaker ,"p_speakers_job_title": speakers_job_title,"p_locations":location,"p_party":party,"p_context":context,"p_probability_lstm":round(probability_lstm, 4),"p_probability_gru":round(probability_gru, 4),"p_probability_textcnn":round(probability_textcnn, 4),"p_ensemble_probability":round(ensemble_prediction, 4),"p_flag_lstm":probability_lstm >= threshold,"p_flag_gru":probability_gru >= threshold,"p_flag_textcnn":probability_textcnn >= threshold,"p_ensemble_flag":ensemble_prediction >= threshold}
@@ -126,6 +136,9 @@ def show():
                     st.session_state['last_p_id'] = None
                     st.session_state['prediction_made'] = False
                     st.error(p_id)
+
+
+                
     # Feedback form after prediction
     if st.session_state.get('prediction_made') and st.session_state.get('last_p_id'):
         st.subheader("📝 Submit Feedback for this Prediction")
