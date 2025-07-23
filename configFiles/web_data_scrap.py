@@ -23,7 +23,7 @@ evidence_classifier.eval()
 def summarize_web_evidence(statement, web_content, max_sentences=5, max_length=2000):
     """Summarize scraped web content relevant to the input statement using ChatGroq."""
     try:
-        api_key = "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"
+        api_key = "Your_Groq_API_Key"  # Replace with your actual Groq API key
         llm = ChatGroq(api_key=api_key, model="llama3-8b-8192")
         prompt_template = PromptTemplate.from_template(
             """Given the following statement: '{statement}'
