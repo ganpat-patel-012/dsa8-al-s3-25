@@ -3,6 +3,24 @@ import requests
 from configFiles.config import API_URL
 import re
 import time
+from streamlit_cookies_manager import EncryptedCookieManager
+
+# Initialize cookies manager
+cookies = EncryptedCookieManager(
+    prefix="dsa8_",  # Change as needed
+    password="a-very-secret-password"  # Use a strong password in production
+)
+if not cookies.ready():
+    st.stop()
+
+# Restore session state from cookies if available
+if cookies.get("authenticated") == "True":
+    st.session_state["access_token"] = cookies.get("access_token")
+    st.session_state["username"] = cookies.get("username")
+    st.session_state["authenticated"] = True
+    if cookies.get("user_id"):
+        st.session_state["user_id"] = int(cookies.get("user_id"))
+
 
 def register_user(username, password):
     response = requests.post(f"{API_URL}/register", json={"username": username, "password": password})
@@ -34,10 +52,49 @@ def show():
     if st.session_state.get("authenticated"):
         st.title("Profile")
         st.write(f"**Username:** {st.session_state.get('username', 'Unknown')}")
+        # --- Show all predictions made by the user ---
+        import psycopg2
+        import pandas as pd
+        from configFiles.config import DB_CONFIG
+        user_id = st.session_state.get('user_id')
+        if not user_id:
+            # Optionally, fetch user_id from username if not present
+            conn = psycopg2.connect(**DB_CONFIG)
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM users WHERE username=%s", (st.session_state['username'],))
+            row = cursor.fetchone()
+            user_id = row[0] if row else None
+            conn.close()
+            st.session_state['user_id'] = user_id
+            if user_id:
+                cookies["user_id"] = str(user_id)
+                cookies.save()
+        if user_id:
+            try:
+                conn = psycopg2.connect(**DB_CONFIG)
+                query = """
+                    SELECT p_id, p_statements, p_subjects, p_speakers, p_speakers_job_title, p_locations, p_party, p_context, p_probability_lstm, p_probability_gru, p_probability_textcnn, p_ensemble_probability, p_flag_lstm, p_flag_gru, p_flag_textcnn, p_ensemble_flag, prediction_time
+                    FROM predictions
+                    WHERE p_user_id = %s
+                    ORDER BY prediction_time DESC
+                """
+                df = pd.read_sql_query(query, conn, params=(user_id,))
+                conn.close()
+                if not df.empty:
+                    st.subheader("Your Predictions History")
+                    st.dataframe(df, use_container_width=True)
+                else:
+                    st.info("You have not made any predictions yet.")
+            except Exception as e:
+                st.error(f"Error fetching your predictions: {e}")
         if st.button("Logout"):
-            for key in ["access_token", "username", "authenticated"]:
+            for key in ["access_token", "username", "authenticated", "user_id"]:
                 if key in st.session_state:
                     del st.session_state[key]
+            # Clear cookies on logout
+            for key in ["access_token", "username", "authenticated", "user_id"]:
+                cookies[key] = ""
+            cookies.save()
             st.success("Logged out successfully.")
             st.rerun()
     else:
@@ -60,6 +117,7 @@ def show():
                     resp = register_user(reg_username, reg_password)
                     if resp.status_code == 200:
                         st.success("Registration successful! Please login.")
+                        import time
                         time.sleep(2)
                         st.rerun()
                     else:
@@ -86,6 +144,22 @@ def show():
                         st.session_state["access_token"] = token
                         st.session_state["username"] = login_username
                         st.session_state["authenticated"] = True
+                        # Fetch user_id
+                        import psycopg2
+                        from configFiles.config import DB_CONFIG
+                        conn = psycopg2.connect(**DB_CONFIG)
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT id FROM users WHERE username=%s", (login_username,))
+                        row = cursor.fetchone()
+                        user_id = row[0] if row else None
+                        conn.close()
+                        st.session_state["user_id"] = user_id
+                        # Save to cookies
+                        cookies["access_token"] = token
+                        cookies["username"] = login_username
+                        cookies["authenticated"] = "True"
+                        cookies["user_id"] = str(user_id) if user_id else ""
+                        cookies.save()
                         st.success("Login successful! Please navigate to the main page or prediction page.")
                         st.info("You can now close this tab and open the main page or prediction page.")
                         st.rerun()
