@@ -11,3 +11,6 @@ tensorflow
 nltk
 pydantic
 SQLAlchemy>=1.4,<2.0
+passlib[bcrypt]
+python-jose
+passlib

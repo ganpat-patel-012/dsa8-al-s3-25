@@ -4,6 +4,18 @@ from configFiles.config import API_URL
 import requests
 
 def show():
+    # Sidebar logout button
+    if st.session_state.get("authenticated", False):
+        if st.sidebar.button("Logout"):
+            st.session_state.pop("access_token", None)
+            st.session_state.pop("username", None)
+            st.session_state["authenticated"] = False
+            st.rerun()
+
+    if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
+        st.warning("You must be logged in to access this page.")
+        return
+
     st.title("📊 Past Predictions")
 
     col1, col2 = st.columns(2)
