@@ -162,7 +162,7 @@ def search_web_for_evidence(query, max_results=10):
                 skipped += 1
             else:
                 evidence_results.append({"url": url, "scraped_content": scraped_content})
-            time.sleep(5)
+            time.sleep(1)
         logger.info(f"Skipped {skipped} URLs, scraped {len(evidence_results)} valid results for query: {query[:60]}...")
         return evidence_results
     except Exception as e:
@@ -179,7 +179,7 @@ def evaluate_evidence_relevance(statement, evidence_data):
 
     if not evidence_summaries:
         logger.warning(f"No valid evidence summaries for statement: {statement[:60]}...")
-        return 0.0, [], []
+        return [], []
 
     relevance_scores = []
     valid_summaries = []
@@ -188,18 +188,15 @@ def evaluate_evidence_relevance(statement, evidence_data):
             continue
         input_text = f"[CLS] {statement} [SEP] {summary} [SEP]"
         inputs = evidence_tokenizer(input_text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-        
         with torch.no_grad():
             outputs = evidence_classifier(**inputs)
             scores = torch.softmax(outputs.logits, dim=1).detach().numpy()[0]
             relevance_score = float(scores[1])
             relevance_scores.append(relevance_score)
             valid_summaries.append(summary)
-    
-    max_relevance_score = max(relevance_scores) if relevance_scores else 0.0
-    logger.info(f"Max relevance score for statement '{statement[:60]}...': {max_relevance_score:.4f}")
+
     logger.info(f"Evidence relevance scores: {relevance_scores}")
-    return max_relevance_score, relevance_scores, valid_summaries
+    return relevance_scores, valid_summaries
 
 def scrape_web_evidence(statement, max_results=10):
     """
@@ -225,10 +222,10 @@ def scrape_web_evidence(statement, max_results=10):
     # Evaluate evidence relevance
     evidence_data = []
     if web_evidence:
-        max_relevance_score, relevance_scores, evidence_summaries = evaluate_evidence_relevance(statement, web_evidence)
+        relevance_scores, evidence_summaries = evaluate_evidence_relevance(statement, web_evidence)
     else:
         logger.warning(f"No web evidence found for statement: {statement[:60]}...")
-        max_relevance_score, relevance_scores, evidence_summaries = 0.0, [], []
+        relevance_scores, evidence_summaries = [], []
 
     # Compile evidence data
     valid_evidence_index = 0
