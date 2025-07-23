@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 from configFiles.config import API_URL
 import re
+import time
 
 def register_user(username, password):
     response = requests.post(f"{API_URL}/register", json={"username": username, "password": password})
@@ -38,9 +39,9 @@ def show():
                 if key in st.session_state:
                     del st.session_state[key]
             st.success("Logged out successfully.")
-            st.experimental_rerun()
+            st.rerun()
     else:
-        st.title("User Authentication")
+        st.title("Profile")
         tab_login, tab_register = st.tabs(["Login", "Register"])
 
         with tab_register:
@@ -59,12 +60,14 @@ def show():
                     resp = register_user(reg_username, reg_password)
                     if resp.status_code == 200:
                         st.success("Registration successful! Please login.")
+                        time.sleep(2)
+                        st.rerun()
                     else:
                         detail = resp.json().get('detail', resp.text)
                         if "already exists" in detail.lower():
                             st.error(f"Registration failed: {detail}")
                             if st.button("Go to Login"):
-                                st.experimental_set_query_params(tab="Login")
+                                st.rerun()
                         else:
                             st.error(f"Registration failed: {detail}")
 
@@ -85,7 +88,7 @@ def show():
                         st.session_state["authenticated"] = True
                         st.success("Login successful! Please navigate to the main page or prediction page.")
                         st.info("You can now close this tab and open the main page or prediction page.")
-                        st.experimental_rerun()
+                        st.rerun()
                     else:
                         st.error(f"Login failed: {resp.json().get('detail', resp.text)}")
 

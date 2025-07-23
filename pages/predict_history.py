@@ -4,8 +4,17 @@ from configFiles.config import API_URL
 import requests
 
 def show():
-    # Sidebar logout button
+    # Sidebar login/register button if not authenticated
+    if not st.session_state.get("authenticated", False):
+        if st.sidebar.button("Login/Register"):
+            try:
+                st.switch_page("pages/profile.py")
+            except Exception:
+                st.experimental_set_query_params(page="profile")
+
+    # --- Sidebar: Only show logout if authenticated ---
     if st.session_state.get("authenticated", False):
+        st.sidebar.write(f"Logged in as: {st.session_state['username']}")
         if st.sidebar.button("Logout"):
             st.session_state.pop("access_token", None)
             st.session_state.pop("username", None)

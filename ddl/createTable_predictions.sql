@@ -7,6 +7,7 @@ CREATE TABLE predictions (
     p_locations VARCHAR(50),
     p_party VARCHAR(50),
     p_context VARCHAR(50),
+    p_user_id INTEGER REFERENCES users(id),
     p_probability_lstm NUMERIC(10,2),
     p_probability_gru NUMERIC(10,2),
     p_probability_textcnn NUMERIC(10,2),
@@ -17,6 +18,3 @@ CREATE TABLE predictions (
     p_ensemble_flag VARCHAR(50),
     prediction_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
-
--- remove all records : TRUNCATE TABLE predictions RESTART IDENTITY;

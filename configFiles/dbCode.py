@@ -24,6 +24,7 @@ def insert_prediction(data):
                         p_locations,
                         p_party,
                         p_context,
+                        p_user_id,
                         p_probability_lstm,
                         p_probability_gru,
                         p_probability_textcnn,
@@ -34,7 +35,7 @@ def insert_prediction(data):
                         p_ensemble_flag
                     ) VALUES ({placeholders}) RETURNING p_id
                 """).format(
-                    placeholders=sql.SQL(', ').join(sql.Placeholder() * 15)
+                    placeholders=sql.SQL(', ').join(sql.Placeholder() * 16)
                 )
 
                 if isinstance(data, list):
@@ -47,6 +48,7 @@ def insert_prediction(data):
                             item["p_locations"],
                             item["p_party"],
                             item["p_context"],
+                            item["p_user_id"],
                             item["p_probability_lstm"],
                             item["p_probability_gru"],
                             item["p_probability_textcnn"],
@@ -71,6 +73,7 @@ def insert_prediction(data):
                         data["p_locations"],
                         data["p_party"],
                         data["p_context"],
+                        data["p_user_id"],
                         data["p_probability_lstm"],
                         data["p_probability_gru"],
                         data["p_probability_textcnn"],

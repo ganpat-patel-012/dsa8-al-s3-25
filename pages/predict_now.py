@@ -3,10 +3,21 @@ import pandas as pd
 from configFiles.makePrediction import get_prediction_all
 from configFiles.dbCode import insert_prediction, insert_feedback
 from datetime import datetime
+import psycopg2
+from configFiles.config import DB_CONFIG
  
 def show():
-    # Sidebar logout button
+    # Sidebar login/register button if not authenticated
+    if not st.session_state.get("authenticated", False):
+        if st.sidebar.button("Login/Register"):
+            try:
+                st.switch_page("pages/profile.py")
+            except Exception:
+                st.experimental_set_query_params(page="profile")
+
+    # --- Sidebar: Only show logout if authenticated ---
     if st.session_state.get("authenticated", False):
+        st.sidebar.write(f"Logged in as: {st.session_state['username']}")
         if st.sidebar.button("Logout"):
             st.session_state.pop("access_token", None)
             st.session_state.pop("username", None)
@@ -94,6 +105,18 @@ def show():
 
                 # result_data = {**payload, "predicted_price": predicted_price, "prediction_source": "WebApp", "prediction_type": "Single"}
                 result_data = {"p_statements": statement, "p_subjects": subject, "p_speakers": speaker ,"p_speakers_job_title": speakers_job_title,"p_locations":location,"p_party":party,"p_context":context,"p_probability_lstm":round(probability_lstm, 4),"p_probability_gru":round(probability_gru, 4),"p_probability_textcnn":round(probability_textcnn, 4),"p_ensemble_probability":round(ensemble_prediction, 4),"p_flag_lstm":probability_lstm >= threshold,"p_flag_gru":probability_gru >= threshold,"p_flag_textcnn":probability_textcnn >= threshold,"p_ensemble_flag":ensemble_prediction >= threshold}
+                # Add user id to result_data
+                user_id = st.session_state.get('user_id')
+                if not user_id:
+                    # Optionally, fetch user_id from username if not present
+                    conn = psycopg2.connect(**DB_CONFIG)
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT id FROM users WHERE username=%s", (st.session_state['username'],))
+                    row = cursor.fetchone()
+                    user_id = row[0] if row else None
+                    conn.close()
+                    st.session_state['user_id'] = user_id
+                result_data["p_user_id"] = user_id
                 p_id = insert_prediction(result_data)
                 if isinstance(p_id, int):
                     st.session_state['last_p_id'] = p_id

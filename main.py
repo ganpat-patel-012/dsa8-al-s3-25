@@ -5,6 +5,14 @@ import importlib
 
 st.set_page_config(page_title="Fake News Detection", layout="wide")
 
+# --- Sidebar: Show login/register if not authenticated ---
+if not st.session_state.get("authenticated", False):
+    if st.sidebar.button("Login/Register"):
+        try:
+            st.switch_page("pages/profile.py")
+        except Exception:
+            st.experimental_set_query_params(page="profile")
+
 # --- Sidebar: Only show logout if authenticated ---
 if st.session_state.get("authenticated", False):
     st.sidebar.write(f"Logged in as: {st.session_state['username']}")
