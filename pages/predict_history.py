@@ -2,6 +2,23 @@ import streamlit as st
 import pandas as pd
 from configFiles.config import API_URL
 import requests
+from streamlit_cookies_manager import EncryptedCookieManager
+
+cookies = EncryptedCookieManager(
+    prefix="dsa8_",
+    password="a-very-secret-password"
+)
+if not cookies.ready():
+    st.stop()
+
+# Restore session state from cookies if available
+if cookies.get("authenticated") == "True":
+    st.session_state["access_token"] = cookies.get("access_token")
+    st.session_state["username"] = cookies.get("username")
+    st.session_state["authenticated"] = True
+    if cookies.get("user_id"):
+        st.session_state["user_id"] = int(cookies.get("user_id"))
+
 
 def show():
     # Sidebar login/register button if not authenticated

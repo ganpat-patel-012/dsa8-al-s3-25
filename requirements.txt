@@ -20,3 +20,4 @@ transformers
 beautifulsoup4
 torch
 googlesearch-python
+streamlit-cookies-manager

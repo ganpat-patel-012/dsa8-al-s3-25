@@ -107,3 +107,32 @@ def insert_feedback(f_p_id, f_statemnt, f_flag, f_comment):
         return "\u2705 Feedback saved to database!"
     except Exception as e:
         return f"\u274c Database Error: {e}"
+
+def insert_web_data_scrap(web_data_rows):
+    """
+    Inserts web evidence data into web_data_scrap table. Expects a list of dicts, each with keys:
+    'p_id', 'statement', 'url', 'scraped_content', 'evidence_summary', 'relevance_score'.
+    """
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                insert_query = """
+                    INSERT INTO web_data_scrap (
+                        p_id, statement, url, scraped_content, evidence_summary, relevance_score
+                    ) VALUES (%s, %s, %s, %s, %s, %s)
+                """
+                values = [
+                    (
+                        row['p_id'],
+                        row['statement'],
+                        row['url'],
+                        row['scraped_content'],
+                        row['evidence_summary'],
+                        row['relevance_score']
+                    ) for row in web_data_rows
+                ]
+                cursor.executemany(insert_query, values)
+            conn.commit()
+        return "\u2705 Web evidence data saved to database!"
+    except Exception as e:
+        return f"\u274c Database Error (web_data_scrap): {e}"

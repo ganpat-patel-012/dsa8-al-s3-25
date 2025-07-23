@@ -8,6 +8,22 @@ from configFiles.config import DB_CONFIG
 from configFiles.web_data_scrap import scrape_web_evidence
 import time
 import random
+from streamlit_cookies_manager import EncryptedCookieManager
+
+cookies = EncryptedCookieManager(
+    prefix="dsa8_",
+    password="a-very-secret-password"
+)
+if not cookies.ready():
+    st.stop()
+
+# Restore session state from cookies if available
+if cookies.get("authenticated") == "True":
+    st.session_state["access_token"] = cookies.get("access_token")
+    st.session_state["username"] = cookies.get("username")
+    st.session_state["authenticated"] = True
+    if cookies.get("user_id"):
+        st.session_state["user_id"] = int(cookies.get("user_id"))
  
 def show():
     # Sidebar login/register button if not authenticated
@@ -141,10 +157,19 @@ def show():
         st.subheader("Web Evidence Results")
         if not evidence_df.empty:
             st.dataframe(evidence_df)
-            if 'relevance_score' in evidence_df.columns and not evidence_df['relevance_score'].dropna().empty:
-                probability_web = evidence_df['relevance_score'].dropna().mean()
-                st.write(f"Web Evidence Relevance Score (avg): {probability_web:.4f}")
-                st.write(f"Web Data flag: {probability_web >= threshold}")
+            # Only consider relevance_score where evidence_summary is valid
+            if 'relevance_score' in evidence_df.columns:
+                valid_mask = (
+                    evidence_df['evidence_summary'].notna() &
+                    (evidence_df['evidence_summary'] != "No relevant evidence summary found")
+                )
+                valid_scores = evidence_df.loc[valid_mask, 'relevance_score'].dropna()
+                if not valid_scores.empty:
+                    probability_web = valid_scores.mean()
+                    st.write(f"Web Evidence Relevance Score (avg): {probability_web:.4f}")
+                    st.write(f"Web Data flag: {probability_web >= threshold}")
+                else:
+                    st.info("No relevant web evidence found for this statement.")
         else:
             st.info("No web evidence found for this statement.")
 
@@ -168,6 +193,21 @@ def show():
             st.session_state['last_p_id'] = p_id
             st.session_state['prediction_made'] = True
             st.success(f"✅ Prediction saved to database! (ID: {p_id})")
+            # Save web evidence to web_data_scrap
+            if 'evidence_df' in locals() and not evidence_df.empty:
+                from configFiles.dbCode import insert_web_data_scrap
+                web_data_rows = []
+                for _, row in evidence_df.iterrows():
+                    web_data_rows.append({
+                        'p_id': p_id,
+                        'statement': row.get('statement', ''),
+                        'url': row.get('url', ''),
+                        'scraped_content': row.get('scraped_content', ''),
+                        'evidence_summary': row.get('evidence_summary', ''),
+                        'relevance_score': row.get('relevance_score', None)
+                    })
+                msg = insert_web_data_scrap(web_data_rows)
+                st.info(msg)
         else:
             st.session_state['last_p_id'] = None
             st.session_state['prediction_made'] = False
