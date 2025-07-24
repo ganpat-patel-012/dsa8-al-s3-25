@@ -38,9 +38,13 @@ def show():
     if st.session_state.get("authenticated", False):
         st.sidebar.write(f"Logged in as: {st.session_state['username']}")
         if st.sidebar.button("Logout"):
-            st.session_state.pop("access_token", None)
-            st.session_state.pop("username", None)
-            st.session_state["authenticated"] = False
+            for key in ["access_token", "username", "authenticated", "user_id"]:
+                if key in st.session_state:
+                    del st.session_state[key]
+            # Clear cookies on logout
+            for key in ["access_token", "username", "authenticated", "user_id"]:
+                cookies[key] = ""
+            cookies.save()
             st.rerun()
 
     if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
@@ -73,6 +77,7 @@ def show():
         else:
             display_label = "False"
         st.info(f"Target label for this random sample: {display_label}")
+        # del st.session_state["_random_label"]
 
     st.subheader("🔍 Make your Prediction")
     col1, col2 = st.columns(2)
@@ -151,6 +156,30 @@ def show():
         st.subheader("Prediction Results")
         st.table(df)
 
+        # Save prediction to DB immediately after model and ensemble prediction
+        result_data = {"p_statements": statement, "p_subjects": subject, "p_speakers": speaker ,"p_speakers_job_title": speakers_job_title,"p_locations":location,"p_party":party,"p_context":context,"p_probability_lstm":round(probability_lstm, 4),"p_probability_gru":round(probability_gru, 4),"p_probability_textcnn":round(probability_textcnn, 4),"p_ensemble_probability":round(ensemble_prediction, 4),"p_flag_lstm":probability_lstm >= threshold,"p_flag_gru":probability_gru >= threshold,"p_flag_textcnn":probability_textcnn >= threshold,"p_ensemble_flag":ensemble_prediction >= threshold}
+        # Add user id to result_data
+        user_id = st.session_state.get('user_id')
+        if not user_id:
+            # Optionally, fetch user_id from username if not present
+            conn = psycopg2.connect(**DB_CONFIG)
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM users WHERE username=%s", (st.session_state['username'],))
+            row = cursor.fetchone()
+            user_id = row[0] if row else None
+            conn.close()
+            st.session_state['user_id'] = user_id
+        result_data["p_user_id"] = user_id
+        p_id = insert_prediction(result_data)
+        if isinstance(p_id, int):
+            st.session_state['last_p_id'] = p_id
+            st.session_state['prediction_made'] = True
+            st.success(f"✅ Prediction saved to database! (ID: {p_id})")
+        else:
+            st.session_state['last_p_id'] = None
+            st.session_state['prediction_made'] = False
+            st.error(p_id)
+
         # --- Web Evidence Section ---
         with st.spinner("Scraping web evidence for the statement... It can take up to 5 minutes... Please wait!"):
             evidence_df = scrape_web_evidence(statement)
@@ -170,31 +199,8 @@ def show():
                     st.write(f"Web Data flag: {probability_web >= threshold}")
                 else:
                     st.info("No relevant web evidence found for this statement.")
-        else:
-            st.info("No web evidence found for this statement.")
-
-
-        # result_data = {**payload, "predicted_price": predicted_price, "prediction_source": "WebApp", "prediction_type": "Single"}
-        result_data = {"p_statements": statement, "p_subjects": subject, "p_speakers": speaker ,"p_speakers_job_title": speakers_job_title,"p_locations":location,"p_party":party,"p_context":context,"p_probability_lstm":round(probability_lstm, 4),"p_probability_gru":round(probability_gru, 4),"p_probability_textcnn":round(probability_textcnn, 4),"p_ensemble_probability":round(ensemble_prediction, 4),"p_flag_lstm":probability_lstm >= threshold,"p_flag_gru":probability_gru >= threshold,"p_flag_textcnn":probability_textcnn >= threshold,"p_ensemble_flag":ensemble_prediction >= threshold}
-        # Add user id to result_data
-        user_id = st.session_state.get('user_id')
-        if not user_id:
-            # Optionally, fetch user_id from username if not present
-            conn = psycopg2.connect(**DB_CONFIG)
-            cursor = conn.cursor()
-            cursor.execute("SELECT id FROM users WHERE username=%s", (st.session_state['username'],))
-            row = cursor.fetchone()
-            user_id = row[0] if row else None
-            conn.close()
-            st.session_state['user_id'] = user_id
-        result_data["p_user_id"] = user_id
-        p_id = insert_prediction(result_data)
-        if isinstance(p_id, int):
-            st.session_state['last_p_id'] = p_id
-            st.session_state['prediction_made'] = True
-            st.success(f"✅ Prediction saved to database! (ID: {p_id})")
             # Save web evidence to web_data_scrap
-            if 'evidence_df' in locals() and not evidence_df.empty:
+            if isinstance(p_id, int):
                 from configFiles.dbCode import insert_web_data_scrap
                 web_data_rows = []
                 for _, row in evidence_df.iterrows():
@@ -209,12 +215,30 @@ def show():
                 msg = insert_web_data_scrap(web_data_rows)
                 st.info(msg)
         else:
-            st.session_state['last_p_id'] = None
-            st.session_state['prediction_made'] = False
-            st.error(p_id)
+            st.info("No web evidence found for this statement.")
+
+        # --- RAG Prediction Section ---
+        if not evidence_df.empty:
+            st.subheader("RAG Prediction Results")
+            with st.spinner("RAG processing for the statement... It can take up to 5 minutes... Please wait!"):
+                try:
+                    # Rename and reorder columns as required for RAG
+                    rag_df_input = evidence_df.rename(columns={
+                        'scraped_content': 'content',
+                        'evidence_summary': 'content_summary',
+                        'relevance_score': 'probability'
+                    })
+                    # Only keep the required columns in the right order
+                    rag_df_input = rag_df_input[[
+                        'statement', 'url', 'content', 'content_summary', 'probability'
+                    ]]
+                    from configFiles.rag_prediction import main as rag_main
+                    rag_df = rag_main(rag_df_input, statement)
+                    st.dataframe(rag_df)
+                except Exception as e:
+                    st.error(f"RAG prediction failed: {e}")
 
 
-        
     # Feedback form after prediction
     if st.session_state.get('prediction_made') and st.session_state.get('last_p_id'):
         st.subheader("📝 Submit Feedback for this Prediction")

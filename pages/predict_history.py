@@ -33,9 +33,13 @@ def show():
     if st.session_state.get("authenticated", False):
         st.sidebar.write(f"Logged in as: {st.session_state['username']}")
         if st.sidebar.button("Logout"):
-            st.session_state.pop("access_token", None)
-            st.session_state.pop("username", None)
-            st.session_state["authenticated"] = False
+            for key in ["access_token", "username", "authenticated", "user_id"]:
+                if key in st.session_state:
+                    del st.session_state[key]
+            # Clear cookies on logout
+            for key in ["access_token", "username", "authenticated", "user_id"]:
+                cookies[key] = ""
+            cookies.save()
             st.rerun()
 
     if "authenticated" not in st.session_state or not st.session_state["authenticated"]:

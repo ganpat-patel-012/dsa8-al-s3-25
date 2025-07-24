@@ -16,8 +16,15 @@ python-jose
 passlib
 langchain_groq
 langchain
+langchain-community
 transformers
 beautifulsoup4
 torch
 googlesearch-python
 streamlit-cookies-manager
+flask
+ngrok
+faiss-cpu
+sentence-transformers
+twilio
+tf-keras
