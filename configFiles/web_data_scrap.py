@@ -10,6 +10,7 @@ from nltk.tokenize import sent_tokenize
 from collections import Counter
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
+from configFiles.config import GroqAPI
 
 # Set up logging for web scraping
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -23,7 +24,7 @@ evidence_classifier.eval()
 def summarize_web_evidence(statement, web_content, max_sentences=5, max_length=2000):
     """Summarize scraped web content relevant to the input statement using ChatGroq."""
     try:
-        api_key = "Your_Groq_API"  # Replace with your actual Groq API key
+        api_key = GroqAPI  # Replace with your actual Groq API key
         llm = ChatGroq(api_key=api_key, model="llama3-8b-8192")
         prompt_template = PromptTemplate.from_template(
             """Given the following statement: '{statement}'
