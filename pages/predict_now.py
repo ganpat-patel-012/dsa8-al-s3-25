@@ -235,6 +235,14 @@ def show():
                     from configFiles.rag_prediction import main as rag_main
                     rag_df = rag_main(rag_df_input, statement)
                     st.dataframe(rag_df)
+                    
+                    st.subheader("RAG Justification and Prediction")
+                    st.write(f"RAG Justification based on Dataset: {rag_df['justification'].iloc[0] if not rag_df.empty else 'No justification found'}")
+                    st.write(f"RAG Justification based on Web evidence: {rag_df['justification'].iloc[1] if not rag_df.empty else 'No justification found'}")
+                    st.write(f"RAG Preidction based on Dataset: {rag_df['llm_label'].iloc[0] if not rag_df.empty else 'No prediction found'}")
+                    st.write(f"RAG Preidction based on Web evidence: {rag_df['llm_label'].iloc[1] if not rag_df.empty else 'No prediction found'}")
+
+                    
                 except Exception as e:
                     st.error(f"RAG prediction failed: {e}")
 

@@ -102,7 +102,7 @@ Context: {claim_metadata.get('context')}
 """
 
         prompt = PromptTemplate.from_template(
-            """You are a fake news detector. Based on the following examples and metadata, provide a clear, concise, and fact-based justification (250 words) that directly supports or refutes the new claim. Focus on evidence relevant to the claim's truthfulness.
+            """You are a fake news detector. Based on the following examples and metadata, provide a clear, concise, and fact-based justification (100 words) that directly supports or refutes the new claim. Focus on evidence relevant to the claim's truthfulness.
 
 Examples:
 {context}
