@@ -8,7 +8,7 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.docstore.document import Document
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
-from configFiles.config import GroqAPI
+from configFiles.config import GroqAPI  # Uses API key securely
 
 
 def load_data():
@@ -20,9 +20,14 @@ def load_data():
     ])
 
     label_map = {
-        "true": "true", "mostly-true": "true", "half-true": "false",
-        "barely-true": "false", "false": "false", "pants-fire": "false"
+        "true": "true",
+        "mostly-true": "true",
+        "half-true": "false",
+        "barely-true": "false",
+        "false": "false",
+        "pants-fire": "false"
     }
+
     df["binary_label"] = df["label"].map(label_map)
     df["statement_text"] = df["statement"]
 
@@ -32,7 +37,9 @@ def load_data():
         "before_true", "before_false", "before_barely_true", "before_half_true",
         "before_mostly_true", "before_pants_on_fire", "context"
     ]]
+
     return data
+
 
 def create_vector_db(data):
     embedding = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
@@ -58,6 +65,7 @@ def create_vector_db(data):
         )
         for _, row in data.iterrows()
     ]
+
     vector_db = FAISS.from_documents(documents, embedding)
     vector_db.save_local("liar_vector_db")
     return embedding
@@ -83,26 +91,29 @@ Prior Ratings: True={doc.metadata.get('before_true')}, False={doc.metadata.get('
 Context: {doc.metadata.get('context')}"""
             for doc in docs
         ])
+
         claim_info = ""
         if claim_metadata:
             claim_info = f"""
-                            New Claim Metadata:
-                            Speaker: {claim_metadata.get('speaker')} ({claim_metadata.get('speaker_party')} - {claim_metadata.get('speaker_state')})
-                            Subject: {claim_metadata.get('subject')}
-                            Context: {claim_metadata.get('context')}
-                            """
-        prompt = PromptTemplate.from_template("""You are a fake news detector. Based on the following examples and metadata, provide a clear, concise, and fact-based justification (250 words) that directly supports or refutes the new claim. Focus on evidence relevant to the claim's truthfulness.
+New Claim Metadata:
+Speaker: {claim_metadata.get('speaker')} ({claim_metadata.get('speaker_party')} - {claim_metadata.get('speaker_state')})
+Subject: {claim_metadata.get('subject')}
+Context: {claim_metadata.get('context')}
+"""
 
-                Examples:
-                {context}
+        prompt = PromptTemplate.from_template(
+            """You are a fake news detector. Based on the following examples and metadata, provide a clear, concise, and fact-based justification (250 words) that directly supports or refutes the new claim. Focus on evidence relevant to the claim's truthfulness.
 
-                {claim_info}
-                New Claim:
-                "{query}"
+Examples:
+{context}
 
-                Provide a justification that directly addresses the claim's accuracy, citing specific evidence from the examples or metadata. Make sure if you mention label of the classification then its either true or false.
-                """)
-        
+{claim_info}
+New Claim:
+"{query}"
+
+Provide a justification that directly addresses the claim's accuracy, citing specific evidence from the examples or metadata. Make sure if you mention label of the classification then its either true or false."""
+        )
+
         query = prompt.format(context=context, claim_info=claim_info, query=new_claim)
         return llm.invoke(input=query).content
 
@@ -115,13 +126,14 @@ Context: {doc.metadata.get('context')}"""
             doc_id = str(uuid.uuid4())
             metadata = {
                 "statement": row.get("statement", ""),
-                # Do not include url or probability
                 "doc_id": doc_id
             }
+
             new_documents.append(Document(
                 page_content=row.get("content_summary", ""),
                 metadata=metadata
             ))
+
             added_ids.append(doc_id)
 
         vector_db.add_documents(new_documents, ids=added_ids)
@@ -136,10 +148,11 @@ Context: {doc.metadata.get('context')}"""
     return [response_before, response_after]
 
 
-# Remove RoBERTa NLI scoring and replace with LLM-based True/False classification
-
 def classify_claim_with_llm(claim, justification, llm):
-    prompt = f"""Claim: {claim}\nJustification: {justification}\nBased on the justification, is the claim True or False? Answer with only 'True' or 'False'."""
+    prompt = f"""Claim: {claim}
+Justification: {justification}
+Based on the justification, is the claim True or False? Answer with only 'True' or 'False'."""
+
     response = llm.invoke(input=prompt).content.strip()
     if response not in ["True", "False"]:
         response = "Unknown"
@@ -158,16 +171,16 @@ def build_justification_dataframe(claim, justifications, llm_labels):
 
 
 def main(web_df: pd.DataFrame, CLAIM: str):
-    API_KEY = GroqAPI
+    API_KEY = GroqAPI  # Safely from config
 
-    # Load data
+    # Load training data
     data_df = load_data()
 
-    # Only create vector DB if not already present
+    # Create or load vector DB
     vector_db_path = "liar_vector_db"
     embedding = create_vector_db(data_df)
 
-    # Run fake news detection
+    # Detect fake news
     result = detect_fake_news(
         new_claim=CLAIM,
         embedding=embedding,
@@ -178,13 +191,14 @@ def main(web_df: pd.DataFrame, CLAIM: str):
         df=web_df
     )
 
-    # Evaluate justifications
     justification_one, justification_two = result
+
+    # Classify based on justification
     llm = ChatGroq(api_key=API_KEY, model="llama3-8b-8192")
     label_one = classify_claim_with_llm(CLAIM, justification_one, llm)
     label_two = classify_claim_with_llm(CLAIM, justification_two, llm)
 
-    # Build output DataFrame
+    # Generate output
     output_df = build_justification_dataframe(
         CLAIM,
         [justification_one, justification_two],
@@ -194,7 +208,9 @@ def main(web_df: pd.DataFrame, CLAIM: str):
     print(output_df)
     return output_df
 
+
+# Uncomment to run directly
 # if __name__ == "__main__":
 #     web_df = pd.read_csv("liar_dataset/web_df.csv")
 #     CLAIM = "Democrats are cutting our school funding. Four times in the last 10 years before we came into office."
-#     main(web_df,CLAIM)
+#     main(web_df, CLAIM)
