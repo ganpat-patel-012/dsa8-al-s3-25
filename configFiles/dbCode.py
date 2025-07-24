@@ -136,3 +136,29 @@ def insert_web_data_scrap(web_data_rows):
         return "\u2705 Web evidence data saved to database!"
     except Exception as e:
         return f"\u274c Database Error (web_data_scrap): {e}"
+
+def insert_rag_prediction_results(rag_rows):
+    """
+    Inserts RAG prediction results into rag_prediction_results table. Expects a list of dicts, each with keys:
+    'p_id', 'justification', 'llm_label'.
+    """
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                insert_query = """
+                    INSERT INTO rag_prediction_results (
+                        p_id, justification, llm_label
+                    ) VALUES (%s, %s, %s)
+                """
+                values = [
+                    (
+                        row['p_id'],
+                        row['justification'],
+                        row['llm_label']
+                    ) for row in rag_rows
+                ]
+                cursor.executemany(insert_query, values)
+            conn.commit()
+        return "\u2705 RAG prediction results saved to database!"
+    except Exception as e:
+        return f"\u274c Database Error (rag_prediction_results): {e}"

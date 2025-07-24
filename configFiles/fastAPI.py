@@ -126,9 +126,11 @@ def past_predictions(start_date: str, end_date: str):
         end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
 
         query = """
-        SELECT p.*, f.f_id, f.f_statemnt, f.f_flag, f.f_comment
+        SELECT p.*, f.f_id, f.f_statemnt, f.f_flag, f.f_comment,
+               r.id AS rag_id, r.justification, r.llm_label, r.created_at AS rag_created_at
         FROM predictions p
         LEFT JOIN feedback f ON p.p_id = f.f_p_id
+        LEFT JOIN rag_prediction_results r ON p.p_id = r.p_id
         WHERE p.prediction_time::DATE BETWEEN %s AND %s
         ORDER BY p.prediction_time DESC
         """

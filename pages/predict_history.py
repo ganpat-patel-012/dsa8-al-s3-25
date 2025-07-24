@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from configFiles.config import API_URL
 import requests
+import numpy as np
 from streamlit_cookies_manager import EncryptedCookieManager
 
 cookies = EncryptedCookieManager(
@@ -72,11 +73,13 @@ def show():
 
                 df = pd.DataFrame(data)
 
-                df = df.fillna("N/A")
+                df = df.replace('', np.nan).fillna("No Data")
+
+                df = df.fillna("No Data")
 
                 # ✅ Set 'id' as index if it exists
-                if "id" in df.columns:
-                    df = df.set_index("id")
+                if "p_id" in df.columns:
+                    df = df.set_index("p_id")
 
                 st.subheader("✅ Prediction Results")
                 st.dataframe(df, use_container_width=True)

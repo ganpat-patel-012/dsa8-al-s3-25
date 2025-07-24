@@ -171,6 +171,18 @@ def show():
                         from configFiles.rag_prediction import main as rag_main
                         rag_df = rag_main(rag_df_input, statement_only)
                         st.dataframe(rag_df.reset_index(drop=True))
+                        # Save RAG results to DB
+                        if not rag_df.empty and isinstance(p_id, int):
+                            from configFiles.dbCode import insert_rag_prediction_results
+                            rag_rows = []
+                            for _, row in rag_df.iterrows():
+                                rag_rows.append({
+                                    'p_id': p_id,
+                                    'justification': row.get('justification', ''),
+                                    'llm_label': row.get('llm_label', '')
+                                })
+                            msg = insert_rag_prediction_results(rag_rows)
+                            st.info(msg)
                         st.subheader("RAG Justification and Prediction")
                         st.write("RAG Justification based on Dataset:")
                         st.write(rag_df['justification'].iloc[0] if not rag_df.empty else 'No justification found')
@@ -331,6 +343,18 @@ def show():
                         from configFiles.rag_prediction import main as rag_main
                         rag_df = rag_main(rag_df_input, statement_val)
                         st.dataframe(rag_df.reset_index(drop=True))
+                        # Save RAG results to DB
+                        if not rag_df.empty and isinstance(p_id, int):
+                            from configFiles.dbCode import insert_rag_prediction_results
+                            rag_rows = []
+                            for _, row in rag_df.iterrows():
+                                rag_rows.append({
+                                    'p_id': p_id,
+                                    'justification': row.get('justification', ''),
+                                    'llm_label': row.get('llm_label', '')
+                                })
+                            msg = insert_rag_prediction_results(rag_rows)
+                            st.info(msg)
                         st.subheader("RAG Justification and Prediction")
                         st.write("RAG Justification based on Dataset:")
                         st.write(rag_df['justification'].iloc[0] if not rag_df.empty else 'No justification found')
