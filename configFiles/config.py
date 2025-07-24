@@ -1,6 +1,6 @@
 API_URL = "http://dsa8_fastapi:8000"
 
-GroqAPI = "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"  # Replace with your actual Groq API key
+GroqAPI = "Your_API"  # Replace with your actual Groq API key
 
 DB_CONFIG = {
     "dbname": "dsa8_db",
