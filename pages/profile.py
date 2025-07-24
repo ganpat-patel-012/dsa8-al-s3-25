@@ -81,6 +81,7 @@ def show():
                 df = pd.read_sql_query(query, conn, params=(user_id,))
                 conn.close()
                 if not df.empty:
+                    df = df.replace('', None).fillna('No Data')
                     st.subheader("Your Predictions History")
                     st.dataframe(df, use_container_width=True)
                 else:

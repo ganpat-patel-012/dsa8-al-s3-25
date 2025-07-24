@@ -74,12 +74,21 @@ def show():
                 df = pd.DataFrame(data)
 
                 df = df.replace('', np.nan).fillna("No Data")
-
                 df = df.fillna("No Data")
 
-                # ✅ Set 'id' as index if it exists
                 if "p_id" in df.columns:
-                    df = df.set_index("p_id")
+                    # Group by p_id and aggregate justifications
+                    agg_dict = {
+                        "justification": lambda x: [j for j in x if j != "No Data"],
+                        "llm_label": lambda x: [l for l in x if l != "No Data"],
+                    }
+                    # For all other columns, take the first value (since they're duplicated)
+                    for col in df.columns:
+                        if col not in agg_dict and col != "p_id":
+                            agg_dict[col] = "first"
+                    df = df.groupby("p_id", as_index=True).agg(agg_dict)
+                    # Join justifications as a string for display
+                    df["justification"] = df["justification"].apply(lambda x: "\n\n".join(x) if isinstance(x, list) else x)
 
                 st.subheader("✅ Prediction Results")
                 st.dataframe(df, use_container_width=True)
